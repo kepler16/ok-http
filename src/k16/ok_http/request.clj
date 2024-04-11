@@ -12,7 +12,8 @@
 (defn map->Request ^Request [{:keys [request-method body headers url]}]
   (let [method (str/upper-case (name request-method))
         headers (ok-http.headers/map->Headers headers)
-        body (ok-http.body/data->RequestBody (:content-type headers) body)
+        content-type (.get headers "content-type")
+        body (ok-http.body/data->RequestBody content-type body)
 
         body (if (HttpMethod/requiresRequestBody method)
                (or body (RequestBody/create (byte-array 0) nil))
