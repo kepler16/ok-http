@@ -1,0 +1,13 @@
+{:paths ["src"]
+
+ :deps {com.squareup.okhttp3/okhttp {:mvn/version "5.0.0-alpha.12"}}
+
+ :aliases {:build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.6"}
+                          slipset/deps-deploy {:mvn/version "0.2.2"}}
+                   :ns-default build}
+
+           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.87.1366"}
+                               nubank/matcher-combinators {:mvn/version "3.8.8"}}
+                  :extra-paths ["test"]
+                  :exec-fn kaocha.runner/exec-fn
+                  :exec-args {}}}}
