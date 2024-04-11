@@ -12,15 +12,7 @@
     (.build client)))
 
 (defn request [^OkHttpClient client request-data]
-  (let [request (ok-http.request/map->Request request-data)
-        response (-> (.newCall client request)
-                     .execute
-                     ok-http.response/Response->map)
-
-        headers (dissoc (:headers response)
-                        "Transfer-Encoding"
-                        "transfer-encoding")]
-
-    (-> response
-        (select-keys [:status :body])
-        (assoc :headers headers))))
+  (let [request (ok-http.request/map->Request request-data)]
+    (-> (.newCall client request)
+        .execute
+        ok-http.response/Response->map)))
