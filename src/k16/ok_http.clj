@@ -20,22 +20,9 @@
         keep-alive-duration-seconds (or keep-alive-duration-seconds (* 60 5))]
     (ConnectionPool. max-idle-connections keep-alive-duration-seconds TimeUnit/SECONDS)))
 
-(defn instance-of?
-  "Create a schema representing a given Java class"
-  ([class-name]
-   (instance-of? class-name (str "Should be an instance of " class-name)))
-  ([class-name message]
-   [:fn {:error/message message} (partial instance? class-name)]))
-
-(def ?OkHttpClient
-  (instance-of? OkHttpClient))
-
-(def ?ConnectionPool
-  (instance-of? ConnectionPool))
-
 (def ?CreateClientProps
   [:map
-   [:connection-pool ?ConnectionPool]
+   [:connection-pool :any]
 
    [:retry-on-connection-failure :boolean]
    [:follow-redirects :boolean]
@@ -49,7 +36,7 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn create-client
-  {:malli/schema [:=> [:cat ?CreateClientProps] ?OkHttpClient]}
+  {:malli/schema [:=> [:cat ?CreateClientProps] :any]}
   ^OkHttpClient
   [{:keys [connection-pool
            follow-redirects follow-ssl-redirects
