@@ -2,10 +2,10 @@
   (:require
    [clojure.java.io :as io])
   (:import
-   [java.io FilterInputStream InputStream]
    java.io.File
-   [okhttp3 MediaType RequestBody ResponseBody]
-   [okio BufferedSink]))
+   java.io.InputStream
+   [okhttp3 MediaType RequestBody]
+   okio.BufferedSink))
 
 (set! *warn-on-reflection* true)
 
@@ -35,8 +35,3 @@
         (RequestBody/create ^File body media)
 
         :else nil))))
-
-(defn ResponseBody->stream ^InputStream [^ResponseBody body]
-  (let [stream (.byteStream body)]
-    (proxy [FilterInputStream] [stream]
-      (close [] (.close stream) (.close body)))))

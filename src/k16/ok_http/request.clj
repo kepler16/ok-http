@@ -5,7 +5,7 @@
    [k16.ok-http.headers :as ok-http.headers])
   (:import
    [okhttp3 Request Request$Builder RequestBody]
-   [okhttp3.internal.http HttpMethod]))
+   okhttp3.internal.http.HttpMethod))
 
 (set! *warn-on-reflection* true)
 
