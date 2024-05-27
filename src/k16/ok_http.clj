@@ -46,6 +46,7 @@
   [:map
    [:connection-pool {:optional true} :any]
    [:dispatcher {:optional true} :any]
+   [:protocols {:optional true} [:sequential :any]]
 
    [:retry-on-connection-failure {:optional true} :boolean]
    [:follow-redirects {:optional true} :boolean]
@@ -61,42 +62,45 @@
 (defn create-client
   {:malli/schema [:=> [:cat ?CreateClientProps] :any]}
   ^OkHttpClient
-  [{:keys [connection-pool dispatcher
-           follow-redirects follow-ssl-redirects
+  ([] (create-client {}))
+  ([{:keys [connection-pool dispatcher protocols
+            follow-redirects follow-ssl-redirects
 
-           call-timeout-ms connect-timeout-ms
-           read-timeout-ms write-timeout-ms
+            call-timeout-ms connect-timeout-ms
+            read-timeout-ms write-timeout-ms
 
-           ping-interval-ms]}]
+            ping-interval-ms]}]
 
-  (let [client-builder (OkHttpClient$Builder.)
-        dispatcher (or dispatcher
-                       (when virtual-threads-available?
-                         (Dispatcher. (Executors/newVirtualThreadPerTaskExecutor))))]
+   (let [client-builder (OkHttpClient$Builder.)
+         dispatcher (or dispatcher
+                        (when virtual-threads-available?
+                          (Dispatcher. (Executors/newVirtualThreadPerTaskExecutor))))]
 
-    (when (some? connection-pool)
-      (.connectionPool client-builder connection-pool))
+     (when (some? connection-pool)
+       (.connectionPool client-builder connection-pool))
 
-    (when (some? dispatcher)
-      (.dispatcher client-builder dispatcher))
+     (when (some? dispatcher)
+       (.dispatcher client-builder dispatcher))
 
-    (when (some? follow-redirects)
-      (.followRedirects client-builder follow-redirects))
-    (when (some? follow-ssl-redirects)
-      (.followSslRedirects client-builder follow-ssl-redirects))
+     (when (some? follow-redirects)
+       (.followRedirects client-builder follow-redirects))
+     (when (some? follow-ssl-redirects)
+       (.followSslRedirects client-builder follow-ssl-redirects))
 
-    (when (some? call-timeout-ms)
-      (.callTimeout client-builder (->duration call-timeout-ms)))
-    (when (some? connect-timeout-ms)
-      (.connectTimeout client-builder (->duration connect-timeout-ms)))
-    (when (some? read-timeout-ms)
-      (.readTimeout client-builder (->duration read-timeout-ms)))
-    (when (some? write-timeout-ms)
-      (.writeTimeout client-builder (->duration write-timeout-ms)))
-    (when (some? ping-interval-ms)
-      (.pingInterval client-builder (->duration ping-interval-ms)))
+     (when (some? call-timeout-ms)
+       (.callTimeout client-builder (->duration call-timeout-ms)))
+     (when (some? connect-timeout-ms)
+       (.connectTimeout client-builder (->duration connect-timeout-ms)))
+     (when (some? read-timeout-ms)
+       (.readTimeout client-builder (->duration read-timeout-ms)))
+     (when (some? write-timeout-ms)
+       (.writeTimeout client-builder (->duration write-timeout-ms)))
+     (when (some? ping-interval-ms)
+       (.pingInterval client-builder (->duration ping-interval-ms)))
+     (when (some? protocols)
+       (.protocols client-builder protocols))
 
-    (.build client-builder)))
+     (.build client-builder))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn request [^OkHttpClient client request-data]
