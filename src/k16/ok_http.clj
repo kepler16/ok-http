@@ -19,6 +19,19 @@
   (Duration/ofMillis x))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn create-dispatcher
+  ^Dispatcher
+  [{:keys [executor-service idle-callback
+           max-requests max-requests-per-host]}]
+  (let [dispatcher (if executor-service
+                     (Dispatcher. executor-service)
+                     (Dispatcher.))]
+    (some->> idle-callback (.setIdleCallback dispatcher))
+    (some->> max-requests (.setMaxRequests dispatcher))
+    (some->> max-requests-per-host (.setMaxRequestsPerHost dispatcher))
+    dispatcher))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn create-connection-pool
   ^ConnectionPool
   [{:keys [max-idle-connections keep-alive-duration-seconds]}]
