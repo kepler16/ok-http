@@ -135,7 +135,11 @@
    (let [client-builder (OkHttpClient$Builder.)
          dispatcher' (or dispatcher
                          (when virtual-threads-available?
-                           (Dispatcher. (Executors/newVirtualThreadPerTaskExecutor))))]
+                           (-> Executors
+                               (.getMethod "newVirtualThreadPerTaskExecutor"
+                                           (into-array Class []))
+                               (.invoke nil (into-array []))
+                               (Dispatcher.))))]
      (set-options! client-builder (assoc options :dispatcher dispatcher'))
      (.build client-builder))))
 
