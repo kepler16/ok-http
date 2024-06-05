@@ -58,21 +58,16 @@
         keep-alive-duration-seconds (or keep-alive-duration-seconds (* 60 5))]
     (ConnectionPool. max-idle-connections keep-alive-duration-seconds TimeUnit/SECONDS)))
 
-(defn- has-method? [klass name]
-  (let [methods (into #{}
-                      (map (fn [method] (.getName ^Method method)))
-                      (.getDeclaredMethods ^Class klass))]
-    (contains? methods name)))
-
-;; Taken from funcool/promesa:
-;; https://github.com/funcool/promesa/blob/e503874b154224ce85b223144e80b697df91d18e/src/promesa/exec.cljc#L61
-(def ^:private virtual-threads-available?
-  "Var that indicates the availability of virtual threads."
-  (if (and (has-method? Thread "ofVirtual")
-           (try (eval '(Thread/ofVirtual))
-                (catch Exception _ false)))
-    true
-    false))
+(defonce ^{:private true
+           :doc "Default virtual threads dispatcher"}
+  virtual-threads-dispatcher
+  (try
+    (-> Executors
+        (.getMethod "newVirtualThreadPerTaskExecutor" (into-array Class []))
+        (.invoke nil (into-array []))
+        (Dispatcher.))
+    (catch Throwable _
+      nil)))
 
 (def ?CreateClientProps
   (into
@@ -133,13 +128,7 @@
   ([] (create-client {}))
   ([{:keys [dispatcher] :as options}]
    (let [client-builder (OkHttpClient$Builder.)
-         dispatcher' (or dispatcher
-                         (when virtual-threads-available?
-                           (-> Executors
-                               (.getMethod "newVirtualThreadPerTaskExecutor"
-                                           (into-array Class []))
-                               (.invoke nil (into-array []))
-                               (Dispatcher.))))]
+         dispatcher' (or dispatcher virtual-threads-dispatcher)]
      (set-options! client-builder (assoc options :dispatcher dispatcher'))
      (.build client-builder))))
 
