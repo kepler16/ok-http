@@ -3,15 +3,18 @@
    [k16.ok-http.request :as ok-http.request]
    [k16.ok-http.response :as ok-http.response])
   (:import
-   java.lang.reflect.Method
+   [java.io IOException]
    java.time.Duration
    java.util.concurrent.Executors
    java.util.concurrent.TimeUnit
    [okhttp3
+    Call
+    Callback
     ConnectionPool
     Dispatcher
     OkHttpClient
-    OkHttpClient$Builder]))
+    OkHttpClient$Builder
+    Response]))
 
 (set! *warn-on-reflection* true)
 
@@ -36,6 +39,11 @@
    [:timeout-opts {:optional true}
     (into [:map] timeout-opts)]
    [:url :string]])
+
+(def ?Callbacks
+  [:map
+   [:on-failure {:optional true} fn?]
+   [:on-response {:optional true} fn?]])
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn create-dispatcher
@@ -141,15 +149,62 @@
         (.build))
     client))
 
+(defn- ->Callback ^Callback
+  [{:keys [on-failure on-response] :as callbacks}]
+  (when (seq callbacks)
+    (reify Callback
+      (^void onFailure [_ ^Call _call ^IOException ex]
+        (if on-failure
+          (on-failure ex)
+          (.printStackTrace ex)))
+      (^void onResponse [_ ^Call _call ^Response response]
+        (when on-response
+          (-> response
+              (ok-http.response/Response->map)
+              (on-response)))))))
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn request
-  {:malli/schema [:=> [:cat ?OkHttpClient ?RequestData] :any]}
-  ([^OkHttpClient client {:keys [timeout-opts] :as request-data}]
+  {:doc "Performs an HTTP request using OkHttpClient.
+  
+  This function can be used in two different ways:
+  
+  1. Synchronous Request:
+  (request client request-data)
+  - `client`: OkHttpClient instance.
+  - `request-data`: Map containing request details.
+  
+  2. Asynchronous Request:
+  (request client request-data callbacks)
+  - `client`: OkHttpClient instance.
+  - `request-data`: Map containing request details and optional timeout settings.
+  - `callbacks`: Map of callback functions for async handling.
+
+  The function automatically applies timeout settings if provided in the `request-data`.
+
+  `request-data`:
+  - `timeout-opts`: Optional map of timeout settings.
+  
+  `callbacks`:
+  - `on-success`: One arity fn with response map as an argument.
+  - `on-failure`: One arity fn with IOException object as an argument.
+  
+  The function returns the response from the synchronous call, or nil for the asynchronous call.
+
+  Example:
+  (request client {:url \"https://api.example.com\"} {:on-success success-fn :on-failure failure-fn})"
+   :malli/schema [:function
+                  [:=> [:cat ?OkHttpClient ?RequestData] :any]
+                  [:=> [:cat ?OkHttpClient ?RequestData ?Callbacks] :any]]}
+  ([^OkHttpClient client request-data]
+   (request client request-data nil))
+  ([^OkHttpClient client {:keys [timeout-opts] :as request-data} callbacks]
    (let [client' (if timeout-opts
                    (set-timeouts! client timeout-opts)
                    client)
-         request (ok-http.request/map->Request request-data)]
-     (-> (.newCall client' request)
-         (.execute)
-         (ok-http.response/Response->map)))))
+         request (ok-http.request/map->Request request-data)
+         ^Call call (.newCall client' request)]
+     (if-let [ok-http-callback (->Callback callbacks)]
+       (.enqueue call ok-http-callback)
+       (.execute call)))))
 

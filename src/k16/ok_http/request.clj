@@ -9,7 +9,8 @@
 
 (set! *warn-on-reflection* true)
 
-(defn map->Request ^Request [{:keys [request-method body headers url]}]
+(defn map->Request ^Request [{:keys [request-method body headers url]
+                              :or {request-method :get}}]
   (let [method (str/upper-case (name request-method))
         headers (ok-http.headers/map->Headers headers)
         content-type (.get headers "content-type")
