@@ -165,47 +165,59 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn request
-  {:doc "Performs an HTTP request using OkHttpClient.
+  {:doc "Performs a synchronous HTTP request using OkHttpClient.
   
-  This function can be used in two different ways:
-  
-  1. Synchronous Request:
-  (request client request-data)
+  Parameters:
   - `client`: OkHttpClient instance.
-  - `request-data`: Map containing request details.
-  
-  2. Asynchronous Request:
-  (request client request-data callbacks)
-  - `client`: OkHttpClient instance.
-  - `request-data`: Map containing request details and optional timeout settings.
-  - `callbacks`: Map of callback functions for async handling.
-
-  The function automatically applies timeout settings if provided in the `request-data`.
+  - `request-data`: Map containing request details, including optional timeout settings.
 
   `request-data`:
   - `timeout-opts`: Optional map of timeout settings.
-  
-  `callbacks`:
-  - `on-response`: One arity fn with response map as an argument.
-  - `on-failure`: One arity fn with IOException object as an argument.
-  
-  The function returns the response from the synchronous call, or nil for the asynchronous call.
+
+  Returns:
+  - A map representation of the response.
 
   Example:
-  (request client {:url \"https://api.example.com\"} {:on-success success-fn :on-failure failure-fn})"
-   :malli/schema [:function
-                  [:=> [:cat ?OkHttpClient ?RequestData] :any]
-                  [:=> [:cat ?OkHttpClient ?RequestData ?Callbacks] :any]]}
+  (request client {:url \"https://api.example.com\"})"
+   :malli/schema [:=> [:cat ?OkHttpClient ?RequestData] :any]}
   ([^OkHttpClient client request-data]
-   (request client request-data nil))
-  ([^OkHttpClient client {:keys [timeout-opts] :as request-data} callbacks]
-   (let [client' (if timeout-opts
-                   (set-timeouts! client timeout-opts)
+   (let [client' (if (:timeout-opts request-data)
+                   (set-timeouts! client (:timeout-opts request-data))
                    client)
-         request (ok-http.request/map->Request request-data)
-         ^Call call (.newCall client' request)]
-     (if-let [ok-http-callback (->Callback callbacks)]
-       (.enqueue call ok-http-callback)
-       (-> (.execute call)
-           (ok-http.response/Response->map))))))
+         request (ok-http.request/map->Request request-data)]
+     (-> (.newCall client' request)
+         (.execute)
+         (ok-http.response/Response->map)))))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defn request-async
+  {:doc "Performs an asynchronous cancellable HTTP request using OkHttpClient.
+  
+  Parameters:
+  - `client`: OkHttpClient instance.
+  - `request-data`: Map containing request details, including optional timeout settings.
+  - `callbacks`: Map of callback functions for async handling.
+
+  `request-data`:
+  - `timeout-opts`: Optional map of timeout settings.
+
+  `callbacks`:
+  - `on-response`: Function to be called on successful response. Receives the response as a map.
+  - `on-failure`: Function to be called on request failure. Receives the exception as a parameter.
+
+  Returns:
+  - A function that cancels the request when called.
+
+  Example:
+  (request-async client {:url \"https://api.example.com\"} {:on-response success-fn :on-failure failure-fn})"
+   :malli/schema [:=> [:cat ?OkHttpClient ?RequestData ?Callbacks] :any]}
+  [^OkHttpClient client {:keys [timeout-opts] :as request-data} callbacks]
+  (let [client' (if timeout-opts
+                  (set-timeouts! client timeout-opts)
+                  client)
+        request (ok-http.request/map->Request request-data)
+        ^Call call (.newCall client' request)
+        ok-http-callback (->Callback callbacks)]
+    (.enqueue call ok-http-callback)
+    (fn [] (.cancel call))))
 
