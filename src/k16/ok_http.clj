@@ -206,5 +206,6 @@
          ^Call call (.newCall client' request)]
      (if-let [ok-http-callback (->Callback callbacks)]
        (.enqueue call ok-http-callback)
-       (.execute call)))))
+       (-> (.execute call)
+           (ok-http.response/Response->map))))))
 
