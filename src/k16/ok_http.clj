@@ -186,7 +186,7 @@
   - `timeout-opts`: Optional map of timeout settings.
   
   `callbacks`:
-  - `on-success`: One arity fn with response map as an argument.
+  - `on-response`: One arity fn with response map as an argument.
   - `on-failure`: One arity fn with IOException object as an argument.
   
   The function returns the response from the synchronous call, or nil for the asynchronous call.
