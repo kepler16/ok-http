@@ -131,7 +131,9 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn create-client
-  {:malli/schema [:=> [:cat ?CreateClientProps] :any]}
+  {:malli/schema [:function
+                  [:=> [:cat] :any]
+                  [:=> [:cat ?CreateClientProps] :any]]}
   ^OkHttpClient
   ([] (create-client {}))
   ([{:keys [dispatcher] :as options}]
@@ -220,4 +222,3 @@
         ok-http-callback (->Callback callbacks)]
     (.enqueue call ok-http-callback)
     (fn [] (.cancel call))))
-
